@@ -1,0 +1,319 @@
+Program.Sub.ScreenSU.Start
+Gui.Form1..create
+Gui.Form1..caption("Positive Pay Export")
+Gui.Form1..size(3885,2520)
+Gui.Form1..minx(0)
+Gui.Form1..miny(0)
+Gui.Form1..position(0,0)
+Gui.Form1..event(UnLoad,form1_unload)
+Gui.Form1..forecolor(0)
+Gui.Form1..fontstyle(,)
+Gui.Form1..BackColor(-2147483633)
+Gui.Form1..maxbutton(False)
+Gui.Form1..minbutton(False)
+Gui.Form1..mousepointer(0)
+Gui.Form1..sizeable(False)
+Gui.Form1.datepicker1.create(datepicker)
+Gui.Form1.datepicker1.size(1365,285)
+Gui.Form1.datepicker1.position(200,445)
+Gui.Form1.datepicker1.defaultvalue("")
+Gui.Form1.lbl1.create(label,"Start Date",True,1935,255,1,200,200,True,0,Arial,8,-2147483633,0)
+Gui.Form1.lbl1.defaultvalue("")
+Gui.Form1.lbl2.create(label,"End Date",True,1935,255,1,2100,200,True,0,Arial,8,-2147483633,0)
+Gui.Form1.lbl2.defaultvalue("")
+Gui.Form1.datepicker2.create(datepicker)
+Gui.Form1.datepicker2.size(1365,285)
+Gui.Form1.datepicker2.position(2090,445)
+Gui.Form1.datepicker2.defaultvalue("")
+Gui.Form1.cmd1.create(button)
+Gui.Form1.cmd1.caption("Create")
+Gui.Form1.cmd1.size(855,375)
+Gui.Form1.cmd1.position(165,1470)
+Gui.Form1.cmd1.event(Click,cmd1_click)
+Gui.Form1.cmd1.defaultvalue("")
+Gui.Form1.lbl3.Create(Label,"Bank Account",True,1230,255,0,165,870,True,0,"Arial",8,-2147483633,0)
+Gui.Form1.txtAccount.Create(TextBox,"3111056234",True,1380,300,0,180,1080,True,0,"Arial",8,-2147483643,1)
+Gui.Form..Create
+Gui.Form..Caption("Enter Bank Acct#")
+Gui.Form..Size(4335,2115)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MaxButton(False)
+Gui.Form..MinButton(False)
+Gui.Form..MousePointer(0)
+Gui.Form..Sizeable(False)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form.cmdOkBnkAcct.Create(Button)
+Gui.Form.cmdOkBnkAcct.Size(855,375)
+Gui.Form.cmdOkBnkAcct.Position(240,885)
+Gui.Form.cmdOkBnkAcct.Caption("OK")
+Gui.Form.cmdOkBnkAcct.Event(Click,cmd1_Click1)
+Gui.Form.txtBnkAcct.Create(TextBox,"",True,3600,300,0,255,465,True,0,"Arial",8,-2147483643,1)
+Gui.Form.lbl1.Create(Label,"Bank Acct#",True,1935,255,0,270,225,True,0,"Arial",8,-2147483633,0)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+v.Global.sBnkAcct.Declare(String)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+'This is a positive pay export for Chandler Signs, Inc.
+'Date: 02/25/2016
+'Coded by: WAW
+'changed by SFF 04012019 - added popup to ask for acct# instead of ending. added another post-process popup to provide user with filepath to file created so they can copy.
+
+'open connection
+F.odbc.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+'display the custom form
+Gui.Form1..Visible(true)
+f.Intrinsic.Control.CallSub("CheckFolder")
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3626_PosPay.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.cmd1_click.Start
+F.Intrinsic.Control.SetErrorHandler("cmd1_click_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sfile.Declare(String)
+V.Local.saccount.Declare(String)
+V.Local.sret.Declare(Long)
+V.Local.bexists.Declare(Boolean)
+V.Local.ssql.Declare(String)
+V.Local.sbegdate.Declare(String)
+V.Local.senddate.Declare(String)
+V.Local.sline.Declare(String)
+V.Local.sline2.Declare(String)
+V.Local.slinefinal.Declare(String)
+V.Local.schkno.Declare(String)
+V.Local.samount.Declare(String)
+V.Local.schkdate.Declare(String)
+V.Local.spayee.Declare(String)
+V.Local.sdate.Declare(String)
+V.Local.stime.Declare(String)
+V.Local.sfilefinal.Declare(String)
+V.Local.sfilename.Declare(String)
+V.Local.dChkDate.Declare(Date)
+v.Local.dStart.Declare
+v.Local.dEnd.Declare
+
+'close the form
+Gui.Form1..Visible(false)
+
+'set the beg and end date
+V.Local.sbegdate.Set(V.Screen.Form1!datepicker1.Value)
+V.Local.senddate.Set(V.Screen.Form1!datepicker2.Value)
+
+
+F.Intrinsic.ui.InvokeWaitDialog("Processing...")
+
+''build the filepath
+'F.Intrinsic.String.Build("{0}{1}",V.Caller.FilesDir,"\PositivePay\PosPayAcct.txt",V.Local.sfile)
+
+''see if the folder exists if it doesn't create it
+'F.Intrinsic.File.Exists(V.Local.sfile,V.Local.bexists)
+'F.Intrinsic.Control.If(V.Local.bexists,=,False)
+'	'if the file not found close the dialog, inform the user and close the program
+'	F.Intrinsic.UI.CloseWaitDialog
+''	F.Intrinsic.UI.Msgbox("There was no PositivePay\PosPayAcct.txt file found.")
+'	'changed by SFF 04012019 for Sharp Tooling - only do this if the file is not found so the user can enter in the account#
+'	f.Intrinsic.Control.CallSub(EnterAcct)
+'	f.Intrinsic.Control.DoUntil(v.Global.sBnkAcct.Trim,<>,"")
+'		f.Intrinsic.UI.Sleep(1)
+'	f.Intrinsic.Control.Loop
+'		
+''	F.Intrinsic.Control.CallSub(Form1_unload)
+'F.Intrinsic.Control.Else
+'	'otherwise get the acctnumber from the file
+'	F.Intrinsic.File.File2String(V.Local.sfile,V.Local.saccount)
+'	F.Intrinsic.String.LPad(V.Local.saccount,"0",10,V.Local.saccount)
+'F.Intrinsic.Control.EndIf
+
+'only do this if they have entered in something to the Bank Acct# popup.
+f.Intrinsic.Control.If(v.Global.sBnkAcct.Trim,<>,"")
+	F.Intrinsic.String.LPad(v.Global.sBnkAcct,"0",10,V.Local.saccount)
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.String.LPad(v.Screen.Form1!txtAccount.Text.Trim,"0",10,V.Local.saccount)
+
+'query for data based on beginning and ending date
+F.Intrinsic.String.Build("select c.Ck_Date,c.CK_NO,c.CK_Or_Void,c.CK_MDYY,c.Acct_No,c.Amount,c.Vend_No,Case when c.Vend_No like 'EMP%' THEN c.Payee Else v.Name_Vendor End as Payee from v_checks_log c left join V_Vendor_Master v on c.Vend_No	= v.Vendor where c.CK_DATE between '{0}' and '{1}' ORDER BY CK_NO",V.local.sbegdate.PervasiveDate,V.Local.senddate.PervasiveDate,V.Local.ssql)
+F.ODBC.Connection!conX.OpenRecordsetRO("rst",V.Local.sSql)
+'do until end of file equals true
+F.Intrinsic.Control.DoUntil(V.ODBC.conx!rst.EOF,=,True)
+	'set the check number and format it
+	V.Local.schkno.Set(V.ODBC.conx!rst.FieldValTrim!CK_NO)
+	F.Intrinsic.String.LPad(V.Local.schkno,"0",15,V.Local.schkno)
+	'set the check amount and format it
+	V.Local.samount.Set(V.ODBC.conx!rst.FieldValTrim!AMOUNT)
+	F.Intrinsic.String.format(V.Local.samount,"0000000000.00",V.Local.samount)
+	'set the check date and format it
+'	V.Local.schkdate.Set(V.ODBC.conx!rst.FieldValTrim!CK_DATE)
+	V.Local.dChkDate.Set(V.ODBC.conx!rst.FieldValTrim!CK_DATE)
+'	F.Intrinsic.String.right(V.Local.schkdate,6,V.Local.schkdate)
+	F.Intrinsic.String.Format(V.Local.dChkDate,"YYMMDD",V.Local.schkdate)
+	'set the payee and format it	
+	V.Local.spayee.Set(V.ODBC.conx!rst.FieldValTrim!PAYEE)
+	F.Intrinsic.String.replace(V.Local.spayee,","," ",V.Local.spayee)
+	F.Intrinsic.String.RPad(V.Local.spayee," ",256,V.Local.spayee)
+
+	'If CK_OR_VOID = ?V? then ?V? else ? ?. Length 1
+	F.Intrinsic.Control.If(V.ODBC.conx!rst.FieldVal!CK_OR_VOID,=,"V")
+		F.Intrinsic.String.Build("{0},{1},{2},{3},{4},{5},{6}","62","V",V.local.saccount,V.local.schkno,V.local.samount,V.local.schkdate,V.local.spayee,V.Local.sline)
+	F.Intrinsic.Control.Else
+		F.intrinsic.string.build("{0},{1},{2},{3},{4},{5},{6}","62"," ",V.local.saccount,V.local.schkno,V.local.samount,V.local.schkdate,V.local.spayee,V.Local.sline)
+	F.Intrinsic.Control.EndIf
+	'beginning building the textfile
+	F.Intrinsic.Control.If(V.Local.slinefinal,=,"")
+		V.Local.slinefinal.Set(V.Local.sline)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Build("{0}{1}{2}",V.Local.slinefinal,V.Ambient.NewLine,V.Local.sline,V.Local.slinefinal)
+	F.Intrinsic.Control.EndIf
+
+F.ODBC.conX!rst.MoveNext
+F.Intrinsic.Control.Loop
+
+
+
+''set date and format it
+'V.Local.sdate.Set(V.Ambient.Date)
+'F.Intrinsic.String.Format(V.Local.sdate,"YYMMDD",V.Local.sdate)
+''set time and format it
+'V.Local.stime.Set(V.Ambient.Time)
+'F.Intrinsic.String.Format(V.Local.stime,"HHMMSS",V.Local.stime)
+
+''build the filename
+'F.Intrinsic.String.Build("{0}\{1}_{2}.csv",V.local.sdate,V.local.stime,".csv",V.Local.sfilename)
+
+
+'build the filepath
+F.Intrinsic.String.Build("{0}\Custom\5749\{1}\{2}thru{3}_{4}.csv",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sbegdate.FormatYYYYMMDD,v.Local.senddate.FormatYYYYMMDD,v.Ambient.Now.FormatYYYYMMDDHHNNSS,v.Local.sfilefinal)
+
+F.Intrinsic.file.string2file(V.Local.sfilefinal,V.Local.slinefinal)
+f.Intrinsic.UI.MsgBoxExt("File Created in:",v.Local.sfilefinal)
+'f.Intrinsic.String.string2file(v.Local.sfilefinal,v.Local.slinefinal)
+
+'close dialog
+F.Intrinsic.UI.CloseWaitDialog
+
+'call the unload sub
+F.Intrinsic.Control.CallSub(Form1_unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmd1_click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3626_PosPay.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Form1_unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.cmd1_click.End
+
+Program.Sub.form1_unload.Start
+F.Intrinsic.Control.SetErrorHandler("form1_unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'close connection to the database
+F.ODBC.Connection!conx.Close
+
+'end the program
+F.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("form1_unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_3626_PosPay.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.form1_unload.End
+
+Program.Sub.Form_UnLoad.Start
+'call standard end procedure in script.
+f.Intrinsic.Control.CallSub(form1_unload)
+
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.cmd1_Click1.Start
+v.Global.sBnkAcct.Set(v.Screen.Form!txtBnkAcct.text)
+
+Program.Sub.cmd1_Click1.End
+
+Program.Sub.EnterAcct.Start
+gui.Form..Show
+Program.Sub.EnterAcct.End
+
+Program.Sub.CheckFolder.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.bExist.Declare
+	v.Local.sFile.Declare
+	v.Local.sDir.Declare
+	
+	f.Intrinsic.String.Build("{0}\Custom",v.Caller.GlobalDir,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.String.Build("{0}\Custom\5749",v.Caller.GlobalDir,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.String.Build("{0}\Custom\5749\{1}",v.Caller.GlobalDir,v.Caller.CompanyCode,v.Local.sDir)
+	f.Intrinsic.File.DirExists(v.Local.sDir,v.Local.bExist)
+	f.Intrinsic.Control.If(v.Local.bExist.Not)
+		f.Intrinsic.File.CreateDir(v.Local.sDir)
+	f.Intrinsic.Control.EndIf		
+F.Intrinsic.Control.Catch
+	F.Intrinsic.String.Build("Project: 5749 {0}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}GAB Version: {5}}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+	f.Intrinsic.UI.Msgbox(v.Local.sError)
+	f.Intrinsic.Control.CallSub("Unload")
+F.Intrinsic.Control.EndTry	
+Program.Sub.CheckFolder.End
+
+Program.Sub.UnLoad.Start
+f.Intrinsic.Control.Try
+	v.Local.sError.Declare
+	v.Local.sSQL.Declare
+	
+	'Close connection
+	F.Intrinsic.Control.If(V.ODBC.conx.State,=,1)
+		F.ODBC.Connection!conx.close
+	F.Intrinsic.Control.EndIf
+	'End
+	f.Intrinsic.Control.End
+
+F.Intrinsic.Control.Catch
+	F.Intrinsic.Control.End	
+F.Intrinsic.Control.EndTry
+Program.Sub.UnLoad.End
+
+Program.Sub.Comments.Start
+${$0$}$GCG_PosPay$}$WAW$}$2/25/2016
+Program.Sub.Comments.End
